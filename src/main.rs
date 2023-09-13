@@ -1,46 +1,20 @@
 use std::io::prelude::*;
-use std::{collections::HashMap, fs::File};
 
 use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
-use serde::Deserialize;
+
+mod config;
 
 const APP_ID: &str = "org.smona.keyboard";
 const SPACING: i32 = 4;
 
 fn main() -> glib::ExitCode {
     let app = Application::builder().application_id(APP_ID).build();
-    // println!("{}", config.keys.get("a").unwrap().classes);
     app.connect_activate(build_ui);
     app.run()
 }
 
-#[derive(Deserialize)]
-struct Config {
-    keys: HashMap<String, KeyConfig>,
-    pages: HashMap<String, PageConfig>,
-}
-
-#[derive(Deserialize)]
-struct KeyConfig {
-    classes: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct PageConfig {
-    keys: Vec<Vec<String>>,
-}
-
-fn get_config() -> Result<Config, String> {
-    let mut file = File::open("config.toml").map_err(|e| "Could not find config file.")?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .map_err(|e| format!("Could not read config file: {}", e.to_string()))?;
-    Ok(toml::from_str::<Config>(&contents).unwrap())
-    // .map_err(|e| format!("Could not parse config file: {}", e.message()))?
-}
-
 fn build_ui(app: &Application) {
-    let config = get_config()
+    let config = config::get_config()
         .map_err(|e| format!("Failed to load config: {}", e))
         .unwrap();
 
