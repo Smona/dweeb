@@ -10,3 +10,5 @@ gtk = { version = "0.7.2", package = "gtk4", features = ["v4_10"] }
 gtk4-layer-shell = "0.1.5"
 serde = { version = "1.0.188", features = [ "derive" ] }
 toml = "0.8.0"
+wayland-client = "0.31.0"
+wayland-protocols-misc = { version = "0.2.0", features = ["client"] }

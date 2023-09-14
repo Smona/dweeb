@@ -1,15 +1,49 @@
 use std::io::prelude::*;
+use std::thread;
 
 use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
 
 mod config;
+mod wayland;
+
+use wayland::WaylandBackend;
 
 const APP_ID: &str = "org.smona.keyboard";
 const SPACING: i32 = 4;
 
 fn main() -> glib::ExitCode {
     let app = Application::builder().application_id(APP_ID).build();
-    app.connect_activate(build_ui);
+
+    app.connect_activate(move |app| {
+        let (tx, rx) = glib::MainContext::channel(glib::source::Priority::DEFAULT);
+
+        let inner_app = app.clone();
+        rx.attach(None, move |should_be_open| {
+            if should_be_open {
+                build_ui(&inner_app);
+            } else {
+                inner_app.active_window().unwrap().set_visible(false);
+            }
+            glib::ControlFlow::Continue
+        });
+
+        thread::spawn(move || {
+            let mut backend = WaylandBackend::new().unwrap();
+            let mut was_active = false;
+            loop {
+                backend.tick().unwrap();
+                let is_active = backend.is_active();
+                if was_active != is_active {
+                    tx.send(is_active).unwrap();
+                    was_active = is_active;
+                }
+            }
+        });
+    });
+
+    // Prevent the app from exiting when the window is hidden
+    let _hold = app.hold();
+
     app.run()
 }
 
@@ -25,7 +59,6 @@ fn build_ui(app: &Application) {
         .expect("You must define at least one page.");
 
     let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
-    // container.set_hexpand(true);
     for row in &layout.keys {
         let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
         container.append(&row_box);
