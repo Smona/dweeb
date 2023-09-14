@@ -1,12 +1,12 @@
-use std::io::prelude::*;
-use std::thread;
+use std::time::Duration;
 
+use gtk::glib::timeout_add_local;
 use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
 
 mod config;
 mod wayland;
 
-use wayland::WaylandBackend;
+use wayland::KeyboardWriter;
 
 const APP_ID: &str = "org.smona.keyboard";
 const SPACING: i32 = 4;
@@ -15,29 +15,28 @@ fn main() -> glib::ExitCode {
     let app = Application::builder().application_id(APP_ID).build();
 
     app.connect_activate(move |app| {
-        let (tx, rx) = glib::MainContext::channel(glib::source::Priority::DEFAULT);
+        let conn = wayland_client::Connection::connect_to_env()
+            .map_err(|_| "Could not connect to wayland socket.")
+            .unwrap();
+        let wl_display = conn.display();
+        let mut event_queue = conn.new_event_queue();
+        let _registry = wl_display.get_registry(&event_queue.handle(), ());
+        let mut writer = KeyboardWriter::new(&mut event_queue);
+        let mut was_active = false;
 
         let inner_app = app.clone();
-        rx.attach(None, move |should_be_open| {
-            if should_be_open {
-                build_ui(&inner_app);
-            } else {
-                inner_app.active_window().unwrap().set_visible(false);
+        timeout_add_local(Duration::from_millis(300), move || {
+            event_queue.roundtrip(&mut writer).unwrap();
+            let is_active = writer.is_active();
+            if was_active != is_active {
+                if is_active {
+                    build_ui(&inner_app, &writer);
+                } else {
+                    inner_app.active_window().unwrap().set_visible(false);
+                }
+                was_active = is_active;
             }
             glib::ControlFlow::Continue
-        });
-
-        thread::spawn(move || {
-            let mut backend = WaylandBackend::new().unwrap();
-            let mut was_active = false;
-            loop {
-                backend.tick().unwrap();
-                let is_active = backend.is_active();
-                if was_active != is_active {
-                    tx.send(is_active).unwrap();
-                    was_active = is_active;
-                }
-            }
         });
     });
 
@@ -47,7 +46,7 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
-fn build_ui(app: &Application) {
+fn build_ui(app: &Application, kb: &KeyboardWriter) {
     let config = config::get_config()
         .map_err(|e| format!("Failed to load config: {}", e))
         .unwrap();
@@ -63,6 +62,7 @@ fn build_ui(app: &Application) {
         let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
         container.append(&row_box);
         for key in row {
+            let kb = kb.clone();
             let key = key.to_owned();
             let button = Button::builder()
                 .label(&key)
@@ -71,8 +71,7 @@ fn build_ui(app: &Application) {
                 .build();
 
             button.connect_clicked(move |_| {
-                print!("{}", key);
-                std::io::stdout().flush().unwrap();
+                kb.send_key(key.to_owned());
             });
 
             row_box.append(&button);
