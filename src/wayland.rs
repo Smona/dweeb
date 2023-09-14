@@ -15,6 +15,7 @@ use wayland_protocols_misc::zwp_input_method_v2::client::{
 pub struct KeyboardWriter {
     seat: Option<WlSeat>,
     input_manager: Option<ZwpInputMethodManagerV2>,
+    pub input_method: Option<ZwpInputMethodV2>,
     input_active: bool,
 }
 impl KeyboardWriter {
@@ -22,6 +23,7 @@ impl KeyboardWriter {
         let mut state = KeyboardWriter {
             seat: None,
             input_manager: None,
+            input_method: None,
             input_active: false,
         };
         queue.roundtrip(&mut state).unwrap();
@@ -85,11 +87,11 @@ impl Dispatch<WlSeat, ()> for KeyboardWriter {
         if let wl_seat::Event::Name { name } = event {
             state.seat = Some(seat.to_owned());
             println!("Found seat: {}", name);
-            state
-                .input_manager
-                .as_ref()
-                .unwrap()
-                .get_input_method(seat, qh, ());
+            state.input_method = Some(state.input_manager.as_ref().unwrap().get_input_method(
+                seat,
+                qh,
+                (),
+            ));
         }
     }
 }
