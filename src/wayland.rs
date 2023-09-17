@@ -17,6 +17,7 @@ pub struct KeyboardWriter {
     input_manager: Option<ZwpInputMethodManagerV2>,
     pub input_method: Option<ZwpInputMethodV2>,
     input_active: bool,
+    input_serial: u32,
 }
 impl KeyboardWriter {
     pub fn new(queue: &mut EventQueue<KeyboardWriter>) -> KeyboardWriter {
@@ -24,8 +25,13 @@ impl KeyboardWriter {
             seat: None,
             input_manager: None,
             input_method: None,
+            // Default to true so it works even if text input detection doesn't
             input_active: false,
+            input_serial: 0,
         };
+        // We have to roundtrip 3 times to activate the input_method handle, so that
+        // Activate/Deactivate events start coming in.
+        queue.roundtrip(&mut state).unwrap();
         queue.roundtrip(&mut state).unwrap();
         queue.roundtrip(&mut state).unwrap();
         state
@@ -35,9 +41,15 @@ impl KeyboardWriter {
         self.input_active
     }
 
-    pub fn send_key(&self, key: String) {
+    pub fn send_key(&mut self, key: String) {
         print!("{}", key);
         std::io::stdout().flush().unwrap();
+        if let Some(im) = self.input_method.as_mut() {
+            im.commit_string(key);
+            im.commit(self.input_serial);
+        } else {
+            eprintln!("Warning: no custom input method found")
+        }
     }
 }
 
@@ -56,12 +68,12 @@ impl Dispatch<wl_registry::WlRegistry, ()> for KeyboardWriter {
             version,
         } = event
         {
-            println!("[{}] {} v{}", name, interface, version);
+            // println!("[{}] {} v{}", name, interface, version);
             if interface == "wl_seat" {
                 registry.bind::<WlSeat, (), KeyboardWriter>(name, version, qh, ());
             }
             if interface == "zwp_input_method_manager_v2" {
-                println!("Binding input method");
+                // println!("Creating input method");
                 state.input_manager = Some(
                     registry.bind::<ZwpInputMethodManagerV2, (), KeyboardWriter>(
                         name,
@@ -84,26 +96,28 @@ impl Dispatch<WlSeat, ()> for KeyboardWriter {
         _: &Connection,
         qh: &QueueHandle<KeyboardWriter>,
     ) {
-        if let wl_seat::Event::Name { name } = event {
+        if let wl_seat::Event::Name { .. } = event {
             state.seat = Some(seat.to_owned());
-            println!("Found seat: {}", name);
-            state.input_method = Some(state.input_manager.as_ref().unwrap().get_input_method(
-                seat,
-                qh,
-                (),
-            ));
+            // eprintln!("Found seat: {}", name);
+            if let Some(im) = state.input_manager.as_ref() {
+                state.input_method = Some(im.get_input_method(seat, qh, ()));
+            } else {
+                eprintln!(
+                    "Unable to bind input method management protocol, text input won't work."
+                );
+            }
         }
     }
 }
 
 impl Dispatch<ZwpInputMethodManagerV2, ()> for KeyboardWriter {
     fn event(
-        state: &mut Self,
-        manager: &ZwpInputMethodManagerV2,
-        event: zwp_input_method_manager_v2::Event,
+        _state: &mut Self,
+        _: &ZwpInputMethodManagerV2,
+        _: zwp_input_method_manager_v2::Event,
         _: &(),
         _: &Connection,
-        qh: &QueueHandle<KeyboardWriter>,
+        _: &QueueHandle<KeyboardWriter>,
     ) {
     }
 }
@@ -111,18 +125,25 @@ impl Dispatch<ZwpInputMethodManagerV2, ()> for KeyboardWriter {
 impl Dispatch<ZwpInputMethodV2, ()> for KeyboardWriter {
     fn event(
         state: &mut Self,
-        input_method: &ZwpInputMethodV2,
+        _: &ZwpInputMethodV2,
         event: zwp_input_method_v2::Event,
         _: &(),
         _: &Connection,
-        qh: &QueueHandle<KeyboardWriter>,
+        _: &QueueHandle<KeyboardWriter>,
     ) {
+        // println!("Received input method event! {}", event.opcode());
         match event {
             zwp_input_method_v2::Event::Activate => {
+                // eprintln!("Input method activated!");
                 state.input_active = true;
             }
             zwp_input_method_v2::Event::Deactivate => {
+                // eprintln!("Input method deactivated!");
                 state.input_active = false;
+            }
+            zwp_input_method_v2::Event::Done => {
+                // eprintln!("Received done event");
+                state.input_serial += 1;
             }
             _ => {}
         }
