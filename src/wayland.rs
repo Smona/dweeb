@@ -45,7 +45,11 @@ impl KeyboardWriter {
         print!("{}", key);
         std::io::stdout().flush().unwrap();
         if let Some(im) = self.input_method.as_mut() {
-            im.commit_string(key);
+            match key.as_str() {
+                // Special character handling
+                "<bksp>" => im.delete_surrounding_text(1, 0),
+                _ => im.commit_string(key),
+            }
             im.commit(self.input_serial);
         } else {
             eprintln!("Warning: no custom input method found")
