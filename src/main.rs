@@ -121,7 +121,7 @@ fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
     for row in &layout.keys {
         let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
         container.append(&row_box);
-        for key in row {
+        for key in row.split(' ') {
             let kb = send_key.clone();
             let key = key.to_owned();
             let button = Button::builder()

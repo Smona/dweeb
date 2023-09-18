@@ -25,5 +25,5 @@ pub struct KeyConfig {
 
 #[derive(Deserialize)]
 pub struct PageConfig {
-    pub keys: Vec<Vec<String>>,
+    pub keys: Vec<String>,
 }
