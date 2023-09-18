@@ -5,14 +5,20 @@ use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
 mod config;
 mod wayland;
 
-use tokio::{sync::mpsc::{UnboundedReceiver, unbounded_channel, UnboundedSender}, io::unix::AsyncFd};
+use tokio::{
+    io::unix::AsyncFd,
+    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+};
 use wayland::KeyboardWriter;
 
 const APP_ID: &str = "org.smona.keyboard";
 const SPACING: i32 = 4;
 
-#[tokio::main(flavor="current_thread")]
-async fn run_wayland_thread(mut recv_from_gtk: UnboundedReceiver<String>, send_to_gtk: glib::Sender<bool>) {
+#[tokio::main(flavor = "current_thread")]
+async fn run_wayland_thread(
+    mut recv_from_gtk: UnboundedReceiver<String>,
+    send_to_gtk: glib::Sender<bool>,
+) {
     let conn = wayland_client::Connection::connect_to_env()
         .map_err(|_| "Could not connect to wayland socket.")
         .unwrap();
@@ -91,9 +97,7 @@ fn main() -> glib::ExitCode {
             glib::ControlFlow::Continue
         });
 
-        thread::spawn(move || {
-            run_wayland_thread(recv_from_gtk, send_to_gtk)
-        });
+        thread::spawn(move || run_wayland_thread(recv_from_gtk, send_to_gtk));
     });
 
     // Prevent the app from exiting when the window is hidden
@@ -136,7 +140,7 @@ fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
 
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("Smona's Cool Keyboard!")
+        .title("dweeb")
         .child(&container)
         .build();
 
