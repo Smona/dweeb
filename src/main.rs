@@ -1,5 +1,6 @@
 use std::thread;
 
+use config::PageConfig;
 use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
 
 mod config;
@@ -106,19 +107,9 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
-fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
-    let config = config::get_config()
-        .map_err(|e| format!("Failed to load config: {}", e))
-        .unwrap();
-
-    let layout = config
-        .pages
-        .values()
-        .next()
-        .expect("You must define at least one page.");
-
+fn build_keyboard(page: &PageConfig, send_key: &UnboundedSender<String>) -> gtk::Box {
     let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
-    for row in &layout.keys {
+    for row in &page.keys {
         let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
         container.append(&row_box);
         for key in row.split(' ') {
@@ -138,10 +129,21 @@ fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
         }
     }
 
+    container
+}
+
+fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
+    let config = config::get_config()
+        .map_err(|e| format!("Failed to load config: {}", e))
+        .unwrap();
+
+    let layout = config.layout;
+    let page = &config.pages[&layout.default];
+
     let window = ApplicationWindow::builder()
         .application(app)
         .title("dweeb")
-        .child(&container)
+        .child(&build_keyboard(&page, send_key))
         .build();
 
     configure_layer_shell(&window);
