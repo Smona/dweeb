@@ -20,8 +20,8 @@ pub enum AppInput {
 }
 
 /// Represents the keyboard's shift/capslock state
-#[derive(PartialEq)]
-enum Layer {
+#[derive(PartialEq, Debug, Clone)]
+pub enum Layer {
     Normal,
     Shifted,
     Locked,
@@ -160,10 +160,7 @@ impl AppModel {
 
         self.rows
             .guard()
-            .broadcast(RowInput::Shift(match self.current_layer {
-                Layer::Normal => false,
-                _ => true,
-            }))
+            .broadcast(RowInput::Shift(self.current_layer.clone()))
     }
 }
 

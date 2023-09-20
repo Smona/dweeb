@@ -3,11 +3,12 @@ use relm4::prelude::*;
 
 use crate::config::KeyConfig;
 
-use super::row::RowInput;
+use super::{app::Layer, row::RowInput};
 
 pub struct Key {
     config: KeyConfig,
-    shifted: bool,
+    layer: Layer,
+    classes: Vec<&'static str>,
 }
 
 #[derive(Debug)]
@@ -17,7 +18,7 @@ pub enum KeyOutput {
 
 #[derive(Debug, Clone)]
 pub enum KeyInput {
-    Shift(bool),
+    Shift(Layer),
     KeyPress,
 }
 
@@ -36,6 +37,8 @@ impl FactoryComponent for Key {
             set_label: self.character(),
             set_height_request: 80,
             set_hexpand: true,
+            #[watch]
+            set_css_classes: &self.classes,
             connect_clicked => KeyInput::KeyPress,
         }
     }
@@ -43,14 +46,23 @@ impl FactoryComponent for Key {
     fn init_model(config: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         Self {
             config,
-            shifted: false,
+            classes: Vec::new(),
+            // classes: config.classes.unwrap_or(Vec::new()),
+            layer: Layer::Normal,
         }
     }
 
     fn update(&mut self, msg: Self::Input, sender: FactorySender<Self>) {
         match msg {
             KeyInput::KeyPress => sender.output(KeyOutput::KeyPress(self.character().clone())),
-            KeyInput::Shift(shifted) => self.shifted = shifted,
+            KeyInput::Shift(layer) => {
+                self.layer = layer;
+                if self.config.char == "<shift>" && self.layer == Layer::Locked {
+                    self.classes.push("suggested-action");
+                } else {
+                    self.classes.clear();
+                }
+            }
         }
     }
 
@@ -63,8 +75,8 @@ impl FactoryComponent for Key {
 
 impl Key {
     fn character(&self) -> &String {
-        match (self.shifted, &self.config.upper) {
-            (true, Some(c)) => &c,
+        match (&self.layer, &self.config.upper) {
+            (Layer::Locked | Layer::Shifted, Some(c)) => &c,
             _ => &self.config.char,
         }
     }

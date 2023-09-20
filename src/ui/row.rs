@@ -4,7 +4,7 @@ use relm4::{factory::FactoryVecDeque, prelude::*};
 use crate::config::KeyConfig;
 
 use super::{
-    app::AppInput,
+    app::{AppInput, Layer},
     key::{Key, KeyInput},
 };
 
@@ -20,7 +20,7 @@ pub enum RowOutput {
 #[derive(Debug, Clone)]
 pub enum RowInput {
     KeyPress(String),
-    Shift(bool),
+    Shift(Layer),
 }
 
 #[relm4::factory(pub)]
