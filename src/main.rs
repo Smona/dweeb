@@ -1,19 +1,18 @@
 use std::thread;
 
-use config::PageConfig;
-use gtk::{glib, prelude::*, Application, ApplicationWindow, Button};
+use gtk::glib;
 
 mod config;
+mod dweeb_ui;
 mod wayland;
 
+use dweeb_ui::AppModel;
+use relm4::RelmApp;
 use tokio::{
     io::unix::AsyncFd,
-    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    sync::mpsc::{unbounded_channel, UnboundedReceiver},
 };
 use wayland::KeyboardWriter;
-
-const APP_ID: &str = "org.smona.keyboard";
-const SPACING: i32 = 4;
 
 #[tokio::main(flavor = "current_thread")]
 async fn run_wayland_thread(
@@ -29,8 +28,6 @@ async fn run_wayland_thread(
     let mut writer = KeyboardWriter::new(&mut event_queue);
 
     let mut was_active = writer.is_active();
-    // Send initial value, since active state is edge-detected
-    send_to_gtk.send(was_active).unwrap();
 
     loop {
         // This would be required if other threads were reading from the socket.
@@ -79,91 +76,13 @@ async fn run_wayland_thread(
     }
 }
 
-fn main() -> glib::ExitCode {
-    let app = Application::builder().application_id(APP_ID).build();
+fn main() {
+    let (send_to_gtk, recv_from_wl) = glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
+    let (send_to_wl, recv_from_gtk) = unbounded_channel::<String>();
 
-    app.connect_activate(move |app| {
-        let (send_to_gtk, recv_from_wl) =
-            glib::MainContext::channel(glib::source::Priority::DEFAULT);
-        let (send_to_wl, recv_from_gtk) = unbounded_channel::<String>();
+    // This has to come before the GUI app is initialized
+    thread::spawn(move || run_wayland_thread(recv_from_gtk, send_to_gtk));
 
-        let inner_app = app.clone();
-        let inner_sender = send_to_wl.clone();
-        recv_from_wl.attach(None, move |should_be_open| {
-            if should_be_open {
-                build_ui(&inner_app, &inner_sender);
-            } else if let Some(active_window) = inner_app.active_window() {
-                active_window.set_visible(false);
-            }
-            glib::ControlFlow::Continue
-        });
-
-        thread::spawn(move || run_wayland_thread(recv_from_gtk, send_to_gtk));
-    });
-
-    // Prevent the app from exiting when the window is hidden
-    let _hold = app.hold();
-
-    app.run()
-}
-
-fn build_keyboard(page: &PageConfig, send_key: &UnboundedSender<String>) -> gtk::Box {
-    let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
-    for row in &page.keys {
-        let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
-        container.append(&row_box);
-        for key in row.split(' ') {
-            let kb = send_key.clone();
-            let key = key.to_owned();
-            let button = Button::builder()
-                .label(&key)
-                .height_request(80)
-                .hexpand(true)
-                .build();
-
-            button.connect_clicked(move |_| {
-                kb.send(key.to_owned()).unwrap();
-            });
-
-            row_box.append(&button);
-        }
-    }
-
-    container
-}
-
-fn build_ui(app: &Application, send_key: &UnboundedSender<String>) {
-    let config = config::get_config()
-        .map_err(|e| format!("Failed to load config: {}", e))
-        .unwrap();
-
-    let layout = config.layout;
-    let page = &config.pages[&layout.default];
-
-    let window = ApplicationWindow::builder()
-        .application(app)
-        .title("dweeb")
-        .child(&build_keyboard(&page, send_key))
-        .build();
-
-    configure_layer_shell(&window);
-
-    window.present();
-}
-
-fn configure_layer_shell(window: &ApplicationWindow) {
-    gtk4_layer_shell::init_for_window(window);
-    gtk4_layer_shell::set_layer(window, gtk4_layer_shell::Layer::Overlay);
-    // Push other windows out of the way
-    gtk4_layer_shell::auto_exclusive_zone_enable(window);
-    let anchors = [
-        (gtk4_layer_shell::Edge::Left, true),
-        (gtk4_layer_shell::Edge::Right, true),
-        (gtk4_layer_shell::Edge::Top, false),
-        (gtk4_layer_shell::Edge::Bottom, true),
-    ];
-
-    for (anchor, state) in anchors {
-        gtk4_layer_shell::set_anchor(window, anchor, state);
-    }
+    let app = RelmApp::new("org.smona.keyboard");
+    app.run::<AppModel>((send_to_wl, recv_from_wl));
 }
