@@ -1,7 +1,7 @@
 use gtk::prelude::*;
 use relm4::prelude::*;
 
-use super::app::AppInput;
+use super::{app::AppInput, row::RowInput};
 
 pub struct Key {
     character: String,
@@ -23,7 +23,7 @@ impl FactoryComponent for Key {
     type Input = KeyInput;
     type Output = KeyOutput;
     type CommandOutput = ();
-    type ParentInput = AppInput;
+    type ParentInput = RowInput;
     type ParentWidget = gtk::Box;
 
     view! {
@@ -50,9 +50,9 @@ impl FactoryComponent for Key {
         }
     }
 
-    fn forward_to_parent(output: Self::Output) -> Option<AppInput> {
+    fn forward_to_parent(output: Self::Output) -> Option<RowInput> {
         match output {
-            KeyOutput::KeyPress(key) => Some(AppInput::KeyPress(key)),
+            KeyOutput::KeyPress(key) => Some(RowInput::KeyPress(key)),
         }
     }
 }

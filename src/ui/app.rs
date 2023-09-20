@@ -8,7 +8,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::config;
 
-use super::key::Key;
+use super::row::Row;
 
 #[derive(Debug)]
 pub enum AppInput {
@@ -22,25 +22,8 @@ pub struct AppModel {
     is_open: bool,
     current_layer: &'static str,
     send_key: UnboundedSender<String>,
-    keys: FactoryVecDeque<Key>,
+    rows: FactoryVecDeque<Row>,
 }
-
-// impl AppModel {
-//     fn build_page(&self, page: config::PageConfig) {
-//         let config = config::get_config()
-//             .map_err(|e| format!("Failed to load config: {}", e))
-//             .unwrap();
-
-//         let layout = config.layout;
-//         let page = &config.pages[&layout.default];
-
-//         let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
-//         for row in &page.keys {
-//             let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
-//             container.append(&row_box);
-//         }
-//     }
-// }
 
 #[relm4::component(pub)]
 impl SimpleComponent for AppModel {
@@ -57,8 +40,8 @@ impl SimpleComponent for AppModel {
             set_visible: model.is_open,
 
             #[local_ref]
-            key_box -> gtk::Box {
-                set_orientation: gtk::Orientation::Horizontal,
+            rows_container -> gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
                 set_spacing: super::SPACING,
             }
         }
@@ -75,24 +58,28 @@ impl SimpleComponent for AppModel {
 
         let layout = config.layout;
         let page = &config.pages[&layout.default];
-        let row = &page.keys[0];
 
-        let mut keys = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
+        let mut rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
 
-        for key in row.split(' ') {
-            keys.guard().push_back(key.into());
+        for row in &page.keys {
+            rows.guard().push_back(
+                row.split(' ')
+                    .map(|s| s.into())
+                    .collect::<Vec<String>>()
+                    .into(),
+            );
         }
 
         let model = AppModel {
             current_layer: "default",
             is_open: false,
             send_key,
-            keys,
+            rows,
         };
 
         configure_layer_shell(&window);
 
-        let key_box = model.keys.widget();
+        let rows_container = model.rows.widget();
         let widgets = view_output!();
 
         recv_from_wl.attach(
