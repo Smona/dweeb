@@ -12,7 +12,6 @@ use super::row::Row;
 
 #[derive(Debug)]
 pub enum AppInput {
-    Shift,
     Open,
     Close,
     KeyPress(String),
@@ -23,6 +22,7 @@ pub struct AppModel {
     current_layer: &'static str,
     send_key: UnboundedSender<String>,
     rows: FactoryVecDeque<Row>,
+    config: config::Config,
 }
 
 #[relm4::component(pub)]
@@ -56,26 +56,17 @@ impl SimpleComponent for AppModel {
             .map_err(|e| format!("Failed to load config: {}", e))
             .unwrap();
 
-        let layout = config.layout;
-        let page = &config.pages[&layout.default];
+        let rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
 
-        let mut rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
-
-        for row in &page.keys {
-            rows.guard().push_back(
-                row.split(' ')
-                    .map(|s| s.into())
-                    .collect::<Vec<String>>()
-                    .into(),
-            );
-        }
-
-        let model = AppModel {
-            current_layer: "default",
+        let mut model = AppModel {
+            current_layer: "uninitialized",
             is_open: false,
             send_key,
             rows,
+            config,
         };
+
+        model.set_layer("default");
 
         configure_layer_shell(&window);
 
@@ -101,8 +92,45 @@ impl SimpleComponent for AppModel {
         match msg {
             AppInput::Close => self.is_open = false,
             AppInput::Open => self.is_open = true,
-            AppInput::KeyPress(key) => self.send_key.send(key).unwrap(),
-            AppInput::Shift => {}
+            AppInput::KeyPress(key) => match key.as_str() {
+                "<shift>" => {
+                    self.set_layer(match self.current_layer {
+                        "default" => "shift",
+                        "shift" => "default",
+                        other => other,
+                    });
+                }
+                key => {
+                    self.send_key.send(key.to_string()).unwrap();
+                    if self.current_layer == "shift" {
+                        self.set_layer("default");
+                    }
+                }
+            },
+        }
+    }
+}
+
+impl AppModel {
+    /// Activate a layer, updating the UI
+    fn set_layer(&mut self, layer: &'static str) {
+        if layer == self.current_layer {
+            return;
+        }
+        self.current_layer = layer;
+
+        let layout = &self.config.layout;
+        let page = &self.config.pages[&layout[self.current_layer]];
+
+        let mut rows = self.rows.guard();
+        rows.clear();
+        for row in &page.keys {
+            rows.push_back(
+                row.split(' ')
+                    .map(|s| s.into())
+                    .collect::<Vec<String>>()
+                    .into(),
+            );
         }
     }
 }

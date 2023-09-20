@@ -12,21 +12,27 @@ pub fn get_config() -> Result<Config, String> {
     // .map_err(|e| format!("Could not parse config file: {}", e.message()))?
 }
 
+// #[derive(Hash, Deserialize, Eq, PartialEq)]
+// enum PageType {
+//     Default,
+//     Shift,
+// }
+
 #[derive(Deserialize)]
 pub struct Config {
-    pub layout: LayoutConfig,
+    pub layout: HashMap<String, String>,
     pub keys: HashMap<String, KeyConfig>,
     pub pages: HashMap<String, PageConfig>,
 }
 
-#[derive(Deserialize)]
-pub struct LayoutConfig {
-    /// The name of the default page in this layout
-    pub default: String,
-    /// The name of the page in this layout to display on shift key,
-    /// or during caps lock.
-    pub shift: String,
-}
+// #[derive(Deserialize)]
+// pub struct LayoutConfig {
+//     /// The name of the default page in this layout
+//     pub default: String,
+//     /// The name of the page in this layout to display on shift key,
+//     /// or during caps lock.
+//     pub shift: String,
+// }
 
 #[derive(Deserialize)]
 pub struct KeyConfig {

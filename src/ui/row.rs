@@ -37,7 +37,6 @@ impl FactoryComponent for Row {
     fn init_model(keys: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
         let mut buttons = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
         for key in &keys {
-            println!("{}", key);
             buttons.guard().push_back(key.clone());
         }
         let model = Self { keys, buttons };
