@@ -3,15 +3,15 @@ use std::thread;
 use gtk::glib;
 
 mod config;
-mod dweeb_ui;
+mod ui;
 mod wayland;
 
-use dweeb_ui::AppModel;
 use relm4::RelmApp;
 use tokio::{
     io::unix::AsyncFd,
     sync::mpsc::{unbounded_channel, UnboundedReceiver},
 };
+use ui::app::AppModel;
 use wayland::KeyboardWriter;
 
 #[tokio::main(flavor = "current_thread")]

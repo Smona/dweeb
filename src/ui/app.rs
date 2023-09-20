@@ -2,27 +2,47 @@ use gtk::{
     glib::{clone, Receiver},
     prelude::*,
 };
-use relm4::{component, ComponentParts, ComponentSender, SimpleComponent};
+
+use relm4::{factory::FactoryVecDeque, ComponentParts, ComponentSender, SimpleComponent};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::config;
 
-const SPACING: i32 = 4;
+use super::key::Key;
 
 #[derive(Debug)]
 pub enum AppInput {
     Shift,
     Open,
     Close,
+    KeyPress(String),
 }
 
 pub struct AppModel {
     is_open: bool,
     current_layer: &'static str,
     send_key: UnboundedSender<String>,
+    keys: FactoryVecDeque<Key>,
 }
 
-#[component(pub)]
+// impl AppModel {
+//     fn build_page(&self, page: config::PageConfig) {
+//         let config = config::get_config()
+//             .map_err(|e| format!("Failed to load config: {}", e))
+//             .unwrap();
+
+//         let layout = config.layout;
+//         let page = &config.pages[&layout.default];
+
+//         let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
+//         for row in &page.keys {
+//             let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
+//             container.append(&row_box);
+//         }
+//     }
+// }
+
+#[relm4::component(pub)]
 impl SimpleComponent for AppModel {
     type Input = AppInput;
     type Output = ();
@@ -34,7 +54,13 @@ impl SimpleComponent for AppModel {
             set_default_width: 300,
             set_default_height: 200,
             #[watch]
-            set_visible: model.is_open
+            set_visible: model.is_open,
+
+            #[local_ref]
+            key_box -> gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: super::SPACING,
+            }
         }
     }
 
@@ -43,22 +69,31 @@ impl SimpleComponent for AppModel {
         window: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let model = AppModel {
-            current_layer: "default",
-            is_open: false,
-            send_key,
-        };
-
-        configure_layer_shell(&window);
-
-        let widgets = view_output!();
-
         let config = config::get_config()
             .map_err(|e| format!("Failed to load config: {}", e))
             .unwrap();
 
         let layout = config.layout;
         let page = &config.pages[&layout.default];
+        let row = &page.keys[0];
+
+        let mut keys = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
+
+        for key in row.split(' ') {
+            keys.guard().push_back(key.into());
+        }
+
+        let model = AppModel {
+            current_layer: "default",
+            is_open: false,
+            send_key,
+            keys,
+        };
+
+        configure_layer_shell(&window);
+
+        let key_box = model.keys.widget();
+        let widgets = view_output!();
 
         recv_from_wl.attach(
             None,
@@ -72,30 +107,6 @@ impl SimpleComponent for AppModel {
             }),
         );
 
-        let container = gtk::Box::new(gtk::Orientation::Vertical, SPACING);
-        for row in &page.keys {
-            let row_box = gtk::Box::new(gtk::Orientation::Horizontal, SPACING);
-            container.append(&row_box);
-            for key in row.split(' ') {
-                let kb = model.send_key.clone();
-                let key = key.to_owned();
-                let button = gtk::Button::builder()
-                    .label(&key)
-                    .height_request(80)
-                    .hexpand(true)
-                    .build();
-
-                button.connect_clicked(move |_| {
-                    eprintln!("Sending key");
-                    kb.send(key.to_owned()).unwrap();
-                });
-
-                row_box.append(&button);
-            }
-        }
-
-        window.set_child(Some(&container));
-
         ComponentParts { model, widgets }
     }
 
@@ -103,6 +114,7 @@ impl SimpleComponent for AppModel {
         match msg {
             AppInput::Close => self.is_open = false,
             AppInput::Open => self.is_open = true,
+            AppInput::KeyPress(key) => self.send_key.send(key).unwrap(),
             AppInput::Shift => {}
         }
     }
