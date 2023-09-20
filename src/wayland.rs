@@ -48,7 +48,6 @@ impl KeyboardWriter {
         if let Some(im) = self.input_method.as_mut() {
             match key.as_str() {
                 // Special character handling
-                "<space>" => im.commit_string(" ".into()),
                 "<bksp>" => im.delete_surrounding_text(1, 0),
                 _ => im.commit_string(key),
             }

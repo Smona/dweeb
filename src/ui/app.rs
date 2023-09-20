@@ -10,7 +10,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::config;
 
-use super::row::Row;
+use super::row::{Row, RowInput};
 
 #[derive(Debug)]
 pub enum AppInput {
@@ -19,11 +19,19 @@ pub enum AppInput {
     KeyPress(String),
 }
 
+/// Represents the keyboard's shift/capslock state
+#[derive(PartialEq)]
+enum Layer {
+    Normal,
+    Shifted,
+    Locked,
+}
+
 pub struct AppModel {
     is_open: bool,
-    current_layer: &'static str,
+    current_page: &'static str,
+    current_layer: Layer,
     last_layer_change: Instant,
-    locked: bool,
     send_key: UnboundedSender<String>,
     rows: FactoryVecDeque<Row>,
     config: config::Config,
@@ -63,16 +71,16 @@ impl SimpleComponent for AppModel {
         let rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
 
         let mut model = AppModel {
-            current_layer: "uninitialized",
+            current_page: "uninitialized",
+            current_layer: Layer::Normal,
             last_layer_change: Instant::now(),
-            locked: false,
             is_open: false,
             send_key,
             rows,
             config,
         };
 
-        model.set_layer("default");
+        model.set_page("default");
 
         configure_layer_shell(&window);
 
@@ -98,26 +106,23 @@ impl SimpleComponent for AppModel {
         match msg {
             AppInput::Close => self.is_open = false,
             AppInput::Open => self.is_open = true,
+
             AppInput::KeyPress(key) => match key.as_str() {
-                "<shift>" => match self.current_layer {
-                    "default" => {
-                        self.set_layer("shift");
-                    }
-                    "shift" => {
-                        if !self.locked
-                            && self.last_layer_change.elapsed() < Duration::from_millis(500)
-                        {
-                            self.locked = true;
+                "<shift>" => self.set_layer(match self.current_layer {
+                    Layer::Normal => Layer::Shifted,
+                    Layer::Shifted => {
+                        if self.last_layer_change.elapsed() < Duration::from_millis(500) {
+                            Layer::Locked
                         } else {
-                            self.set_layer("default");
+                            Layer::Normal
                         }
                     }
-                    _ => {}
-                },
+                    Layer::Locked => Layer::Normal,
+                }),
                 key => {
                     self.send_key.send(key.to_string()).unwrap();
-                    if self.current_layer == "shift" && !self.locked {
-                        self.set_layer("default");
+                    if self.current_layer == Layer::Shifted {
+                        self.set_layer(Layer::Normal);
                     }
                 }
             },
@@ -126,28 +131,39 @@ impl SimpleComponent for AppModel {
 }
 
 impl AppModel {
-    /// Activate a layer, updating the UI
-    fn set_layer(&mut self, layer: &'static str) {
+    fn set_page(&mut self, page: &'static str) {
+        if page == self.current_page {
+            return;
+        }
+        self.current_page = page;
+
+        let layout = &self.config.layout;
+        let page = &self.config.pages[&layout["default"]];
+
+        let mut rows = self.rows.guard();
+        rows.clear();
+        for row in &page.keys {
+            let foo = row
+                .split(' ')
+                .map(|s| self.config.keys.get(s).unwrap().clone())
+                .collect();
+            rows.push_back(foo);
+        }
+    }
+
+    fn set_layer(&mut self, layer: Layer) {
         if layer == self.current_layer {
             return;
         }
         self.current_layer = layer;
         self.last_layer_change = Instant::now();
-        self.locked = false;
 
-        let layout = &self.config.layout;
-        let page = &self.config.pages[&layout[self.current_layer]];
-
-        let mut rows = self.rows.guard();
-        rows.clear();
-        for row in &page.keys {
-            rows.push_back(
-                row.split(' ')
-                    .map(|s| s.into())
-                    .collect::<Vec<String>>()
-                    .into(),
-            );
-        }
+        self.rows
+            .guard()
+            .broadcast(RowInput::Shift(match self.current_layer {
+                Layer::Normal => false,
+                _ => true,
+            }))
     }
 }
 

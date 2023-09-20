@@ -34,8 +34,10 @@ pub struct Config {
 //     pub shift: String,
 // }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct KeyConfig {
+    pub char: String,
+    pub upper: Option<String>,
     pub classes: Option<String>,
 }
 

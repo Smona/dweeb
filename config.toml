@@ -1,8 +1,5 @@
 [layout]
 default = 'qwerty'
-shift = 'qwerty_upper'
-
-[keys.a]
 
 [pages.qwerty]
 keys = [
@@ -12,16 +9,94 @@ keys = [
      '<shift> <space> <bksp>',
 ]
 
-[pages.qwerty_upper]
-keys = [
-     'Q W E R T Y U I O P',
-     'A S D F G H J K L',
-     'Z X C V B N M',
-     '<shift> <space> <bksp>',
-]
-
 [pages.symbols]
 keys = [
      '1 2 3 4 5 6 7 8 9 0',
      '@ # $ % & - _ + ( )',
 ]
+
+[keys.'<bksp>']
+char = '<bksp>'
+[keys.'<space>']
+char = ' '
+[keys.'<shift>']
+char = '<shift>'
+
+[keys.a]
+char = 'a'
+upper = 'A'
+[keys.b]
+char = 'b'
+upper = 'B'
+[keys.c]
+char = 'c'
+upper = 'C'
+[keys.d]
+char = 'd'
+upper = 'D'
+[keys.e]
+char = 'e'
+upper = 'E'
+[keys.f]
+char = 'f'
+upper = 'F'
+[keys.g]
+char = 'g'
+upper = 'G'
+[keys.h]
+char = 'h'
+upper = 'H'
+[keys.i]
+char = 'i'
+upper = 'I'
+[keys.j]
+char = 'j'
+upper = 'J'
+[keys.k]
+char = 'k'
+upper = 'K'
+[keys.l]
+char = 'l'
+upper = 'L'
+[keys.m]
+char = 'm'
+upper = 'M'
+[keys.n]
+char = 'n'
+upper = 'N'
+[keys.o]
+char = 'o'
+upper = 'O'
+[keys.p]
+char = 'p'
+upper = 'P'
+[keys.q]
+char = 'q'
+upper = 'Q'
+[keys.r]
+char = 'r'
+upper = 'R'
+[keys.s]
+char = 's'
+upper = 'S'
+[keys.t]
+char = 't'
+upper = 'T'
+[keys.u]
+char = 'u'
+upper = 'U'
+[keys.v]
+char = 'v'
+upper = 'V'
+[keys.w]
+char = 'w'
+upper = 'W'
+[keys.x]
+char = 'x'
+upper = 'X'
+[keys.y]
+char = 'y'
+upper = 'Y'
+[keys.z]
+char = 'z'
+upper = 'Z'
