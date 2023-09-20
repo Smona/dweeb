@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use gtk::{
     glib::{clone, Receiver},
     prelude::*,
@@ -20,6 +22,8 @@ pub enum AppInput {
 pub struct AppModel {
     is_open: bool,
     current_layer: &'static str,
+    last_layer_change: Instant,
+    locked: bool,
     send_key: UnboundedSender<String>,
     rows: FactoryVecDeque<Row>,
     config: config::Config,
@@ -60,6 +64,8 @@ impl SimpleComponent for AppModel {
 
         let mut model = AppModel {
             current_layer: "uninitialized",
+            last_layer_change: Instant::now(),
+            locked: false,
             is_open: false,
             send_key,
             rows,
@@ -93,16 +99,24 @@ impl SimpleComponent for AppModel {
             AppInput::Close => self.is_open = false,
             AppInput::Open => self.is_open = true,
             AppInput::KeyPress(key) => match key.as_str() {
-                "<shift>" => {
-                    self.set_layer(match self.current_layer {
-                        "default" => "shift",
-                        "shift" => "default",
-                        other => other,
-                    });
-                }
+                "<shift>" => match self.current_layer {
+                    "default" => {
+                        self.set_layer("shift");
+                    }
+                    "shift" => {
+                        if !self.locked
+                            && self.last_layer_change.elapsed() < Duration::from_millis(500)
+                        {
+                            self.locked = true;
+                        } else {
+                            self.set_layer("default");
+                        }
+                    }
+                    _ => {}
+                },
                 key => {
                     self.send_key.send(key.to_string()).unwrap();
-                    if self.current_layer == "shift" {
+                    if self.current_layer == "shift" && !self.locked {
                         self.set_layer("default");
                     }
                 }
@@ -118,6 +132,8 @@ impl AppModel {
             return;
         }
         self.current_layer = layer;
+        self.last_layer_change = Instant::now();
+        self.locked = false;
 
         let layout = &self.config.layout;
         let page = &self.config.pages[&layout[self.current_layer]];
