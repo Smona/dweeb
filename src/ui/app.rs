@@ -47,7 +47,7 @@ impl SimpleComponent for AppModel {
         gtk::Window {
             set_title: Some("dweeb"),
             set_default_width: 300,
-            set_default_height: 200,
+            set_default_height: 100,
             #[watch]
             set_visible: model.is_open,
 
