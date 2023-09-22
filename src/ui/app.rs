@@ -1,8 +1,11 @@
 use std::time::{Duration, Instant};
 
+use dirs::config_dir;
 use gtk::{
+    gdk::Display,
     glib::{clone, Receiver},
     prelude::*,
+    CssProvider,
 };
 
 use relm4::{factory::FactoryVecDeque, ComponentParts, ComponentSender, SimpleComponent};
@@ -70,6 +73,7 @@ impl SimpleComponent for AppModel {
 
         let rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
 
+        AppModel::load_css();
         let mut model = AppModel {
             current_page: "uninitialized",
             current_layer: Layer::Normal,
@@ -133,6 +137,25 @@ impl SimpleComponent for AppModel {
 }
 
 impl AppModel {
+    fn load_css() {
+        // Load the CSS file and add it to the provider
+        let provider = CssProvider::new();
+        provider.load_from_data(include_str!("style.css"));
+
+        if let Some(path) = config_dir() {
+            if let Ok(user_css) = std::fs::read_to_string(path.join("dweeb/style.css")) {
+                provider.load_from_data(&user_css);
+            }
+        }
+
+        // Add the provider to the default screen
+        gtk::style_context_add_provider_for_display(
+            &Display::default().expect("Could not connect to a display."),
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+
     fn set_page(&mut self, page: &'static str) {
         if page == self.current_page {
             return;
