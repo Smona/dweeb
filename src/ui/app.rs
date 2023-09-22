@@ -44,7 +44,7 @@ pub struct AppModel {
 impl SimpleComponent for AppModel {
     type Input = AppInput;
     type Output = ();
-    type Init = (UnboundedSender<String>, Receiver<bool>);
+    type Init = (UnboundedSender<String>, Receiver<bool>, config::Config);
 
     view! {
         gtk::Window {
@@ -63,14 +63,10 @@ impl SimpleComponent for AppModel {
     }
 
     fn init(
-        (send_key, recv_from_wl): Self::Init,
+        (send_key, recv_from_wl, config): Self::Init,
         window: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> relm4::ComponentParts<Self> {
-        let config = config::get_config()
-            .map_err(|e| format!("Failed to load config: {}", e))
-            .unwrap();
-
         let rows = FactoryVecDeque::new(gtk::Box::default(), sender.input_sender());
 
         AppModel::load_css();

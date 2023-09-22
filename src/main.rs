@@ -76,7 +76,9 @@ async fn run_wayland_thread(
     }
 }
 
-fn main() {
+fn main() -> Result<(), String> {
+    let config = config::get_config()?;
+
     let (send_to_gtk, recv_from_wl) = glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
     let (send_to_wl, recv_from_gtk) = unbounded_channel::<String>();
 
@@ -84,5 +86,7 @@ fn main() {
     thread::spawn(move || run_wayland_thread(recv_from_gtk, send_to_gtk));
 
     let app = RelmApp::new("org.smona.keyboard");
-    app.run::<AppModel>((send_to_wl, recv_from_wl));
+    app.run::<AppModel>((send_to_wl, recv_from_wl, config));
+
+    Ok(())
 }
