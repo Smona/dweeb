@@ -139,7 +139,8 @@ impl AppModel {
         }
         self.current_page = page;
 
-        let layout = &self.config.layout;
+        let layout_name = &self.config.layout;
+        let layout = &self.config.layouts[layout_name];
         let page = &self.config.pages[&layout[self.current_page]];
 
         let mut rows = self.rows.guard();

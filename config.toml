@@ -1,4 +1,17 @@
-[layout]
+layout = "us"
+
+# Shared pages
+
+[pages.symbols]
+keys = [
+     '1 2 3 4 5 6 7 8 9 0',
+     '@ # $ % & - _ + ( )',
+     '<default> <space> <bksp>',
+]
+
+# End shared pages
+
+[layouts.us]
 default = 'qwerty'
 symbols = 'symbols'
 
@@ -10,11 +23,15 @@ keys = [
      '<symbols> <space>',
 ]
 
-[pages.symbols]
+[layouts.'us+dvorak']
+default = 'dvorak'
+symbols = 'symbols'
+
+[pages.dvorak]
 keys = [
-     '1 2 3 4 5 6 7 8 9 0',
-     '@ # $ % & - _ + ( )',
-     '<default> <space> <bksp>',
+     'p y f g c r l',
+     'a o e u i d h t n',
+     'q j k x b m w v z'
 ]
 
 [keys]
