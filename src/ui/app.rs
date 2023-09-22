@@ -8,7 +8,7 @@ use gtk::{
 use relm4::{factory::FactoryVecDeque, ComponentParts, ComponentSender, SimpleComponent};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::config;
+use crate::config::{self, KeyConfig};
 
 use super::row::{Row, RowInput};
 
@@ -119,6 +119,8 @@ impl SimpleComponent for AppModel {
                     }
                     Layer::Locked => Layer::Normal,
                 }),
+                "<symbols>" => self.set_page("symbols"),
+                "<default>" => self.set_page("default"),
                 key => {
                     self.send_key.send(key.to_string()).unwrap();
                     if self.current_layer == Layer::Shifted {
@@ -138,23 +140,29 @@ impl AppModel {
         self.current_page = page;
 
         let layout = &self.config.layout;
-        let page = &self.config.pages[&layout["default"]];
+        let page = &self.config.pages[&layout[self.current_page]];
 
         let mut rows = self.rows.guard();
         rows.clear();
         for row in &page.keys {
             let foo = row
                 .split(' ')
-                .map(|s| self.config.keys.get(s).unwrap().clone())
+                .map(|s| {
+                    (
+                        match self.config.keys.get(s) {
+                            Some(config) => config.clone(),
+                            // Provide a default config for simple keys
+                            None => KeyConfig::new(s),
+                        },
+                        self.current_layer.clone(),
+                    )
+                })
                 .collect();
             rows.push_back(foo);
         }
     }
 
     fn set_layer(&mut self, layer: Layer) {
-        if layer == self.current_layer {
-            return;
-        }
         self.current_layer = layer;
         self.last_layer_change = Instant::now();
 

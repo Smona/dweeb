@@ -38,7 +38,17 @@ pub struct Config {
 pub struct KeyConfig {
     pub char: String,
     pub upper: Option<String>,
-    pub classes: Option<String>,
+    pub classes: Option<Vec<String>>,
+}
+
+impl KeyConfig {
+    pub fn new(c: &str) -> Self {
+        KeyConfig {
+            char: c.to_string(),
+            upper: None,
+            classes: None,
+        }
+    }
 }
 
 #[derive(Deserialize)]

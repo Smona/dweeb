@@ -24,7 +24,7 @@ pub enum KeyInput {
 
 #[relm4::factory(pub)]
 impl FactoryComponent for Key {
-    type Init = KeyConfig;
+    type Init = (KeyConfig, Layer);
     type Input = KeyInput;
     type Output = KeyOutput;
     type CommandOutput = ();
@@ -43,13 +43,19 @@ impl FactoryComponent for Key {
         }
     }
 
-    fn init_model(config: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
-        Self {
+    fn init_model(
+        (config, layer): Self::Init,
+        _index: &DynamicIndex,
+        _sender: FactorySender<Self>,
+    ) -> Self {
+        let mut model = Self {
             config,
             classes: Vec::new(),
             // classes: config.classes.unwrap_or(Vec::new()),
-            layer: Layer::Normal,
-        }
+            layer,
+        };
+        model.update_classes();
+        model
     }
 
     fn update(&mut self, msg: Self::Input, sender: FactorySender<Self>) {
@@ -57,11 +63,7 @@ impl FactoryComponent for Key {
             KeyInput::KeyPress => sender.output(KeyOutput::KeyPress(self.character().clone())),
             KeyInput::Shift(layer) => {
                 self.layer = layer;
-                if self.config.char == "<shift>" && self.layer == Layer::Locked {
-                    self.classes.push("suggested-action");
-                } else {
-                    self.classes.clear();
-                }
+                self.update_classes()
             }
         }
     }
@@ -74,6 +76,13 @@ impl FactoryComponent for Key {
 }
 
 impl Key {
+    fn update_classes(&mut self) {
+        self.classes.clear();
+        if self.config.char == "<shift>" && self.layer == Layer::Locked {
+            self.classes.push("suggested-action");
+        }
+    }
+
     fn character(&self) -> &String {
         match (&self.layer, &self.config.upper) {
             (Layer::Locked | Layer::Shifted, Some(c)) => &c,

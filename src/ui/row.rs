@@ -25,7 +25,7 @@ pub enum RowInput {
 
 #[relm4::factory(pub)]
 impl FactoryComponent for Row {
-    type Init = Vec<KeyConfig>;
+    type Init = Vec<(KeyConfig, Layer)>;
     type Input = RowInput;
     type Output = RowOutput;
     type CommandOutput = ();
