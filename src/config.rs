@@ -12,6 +12,8 @@ pub fn get_config() -> Result<Config, String> {
 #[derive(Deserialize)]
 pub struct Config {
     pub layout: String,
+    pub key_spacing: i32,
+
     pub layouts: HashMap<String, HashMap<String, String>>,
     pub keys: HashMap<String, KeyConfig>,
     pub pages: HashMap<String, PageConfig>,

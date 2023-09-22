@@ -57,7 +57,7 @@ impl SimpleComponent for AppModel {
             #[local_ref]
             rows_container -> gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
-                set_spacing: super::SPACING,
+                set_spacing: model.config.key_spacing,
             }
         }
     }
@@ -169,7 +169,7 @@ impl AppModel {
         let mut rows = self.rows.guard();
         rows.clear();
         for row in &page.keys {
-            let foo = row
+            let child_key_configs = row
                 .split(' ')
                 .map(|s| {
                     (
@@ -182,7 +182,7 @@ impl AppModel {
                     )
                 })
                 .collect();
-            rows.push_back(foo);
+            rows.push_back((child_key_configs, self.config.key_spacing));
         }
     }
 
