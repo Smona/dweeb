@@ -3,18 +3,11 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 pub fn get_config() -> Result<Config, String> {
-    let mut contents = String::new();
-    std::fs::read_to_string(&mut contents)
+    let contents = std::fs::read_to_string("config.toml")
         .map_err(|e| format!("Could not read config file: {}", e.to_string()))?;
-    Ok(toml::from_str::<Config>(&contents).unwrap())
-    // .map_err(|e| format!("Could not parse config file: {}", e.message()))?
+    toml::from_str::<Config>(&contents)
+        .map_err(|e| format!("Could not parse config file: {}", e.message()))
 }
-
-// #[derive(Hash, Deserialize, Eq, PartialEq)]
-// enum PageType {
-//     Default,
-//     Shift,
-// }
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -30,7 +23,6 @@ pub struct KeyConfig {
     pub upper: Option<String>,
     pub classes: Option<Vec<String>>,
 }
-
 impl KeyConfig {
     pub fn new(c: &str) -> Self {
         KeyConfig {
