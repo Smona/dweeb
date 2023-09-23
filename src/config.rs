@@ -26,6 +26,8 @@ pub struct KeyConfig {
     pub char: String,
     pub upper: Option<String>,
     pub classes: Option<Vec<String>>,
+    /// Icon names found here: https://specifications.freedesktop.org/icon-naming-spec/icon-naming-spec-latest.html
+    pub icon: Option<String>,
 }
 impl KeyConfig {
     pub fn new(c: &str) -> Self {
@@ -33,6 +35,7 @@ impl KeyConfig {
             char: c.to_string(),
             upper: None,
             classes: None,
+            icon: None,
         }
     }
 }

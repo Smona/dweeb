@@ -34,7 +34,11 @@ impl FactoryComponent for Key {
     view! {
         gtk::Button {
             #[watch]
-            set_label: self.character(),
+            set_label?: match &self.config.icon {
+                Some(_) => None,
+                None => Some(self.character()),
+            },
+            set_icon_name?: self.config.icon.as_ref(),
             set_height_request: 80,
             set_hexpand: true,
             #[watch]

@@ -40,6 +40,10 @@ keys = [
 
 [keys]
 '<space>'.char = ' '
+'<bksp>'.char = '<bksp>'
+'<bksp>'.icon = 'edit-clear'
+'<shift>'.char = '<shift>'
+'<shift>'.icon = 'go-up'
 
 [keys.a]
 char = 'a'
