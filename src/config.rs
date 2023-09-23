@@ -13,6 +13,8 @@ pub fn get_config() -> Result<Config, String> {
 pub struct Config {
     pub layout: String,
     pub key_spacing: i32,
+    pub padding: i32,
+    pub width: i32,
 
     pub layouts: HashMap<String, HashMap<String, String>>,
     pub keys: HashMap<String, KeyConfig>,

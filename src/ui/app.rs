@@ -54,10 +54,20 @@ impl SimpleComponent for AppModel {
             #[watch]
             set_visible: model.is_open,
 
-            #[local_ref]
-            rows_container -> gtk::Box {
+            gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
-                set_spacing: model.config.key_spacing,
+                set_margin_top: model.config.padding,
+                set_margin_start: model.config.padding,
+                set_margin_end: model.config.padding,
+                set_margin_bottom: model.config.padding,
+                set_width_request: model.config.width,
+                set_halign: gtk::Align::Center,
+
+                #[local_ref]
+                rows_container -> gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_spacing: model.config.key_spacing,
+                }
             }
         }
     }
