@@ -44,6 +44,10 @@ keys = [
 '<bksp>'.icon = 'edit-clear'
 '<shift>'.char = '<shift>'
 '<shift>'.icon = 'go-up'
+'<symbols>'.char = '<symbols>'
+'<symbols>'.label = '123'
+'<default>'.char = '<default>'
+'<default>'.label = 'ABC'
 
 [keys.a]
 char = 'a'

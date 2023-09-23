@@ -23,9 +23,15 @@ pub struct Config {
 
 #[derive(Deserialize, Clone)]
 pub struct KeyConfig {
+    /// The character to insert when the key is pressed (also shown on button)
     pub char: String,
+    /// The character to insert when the key is pressed while shift is active (also shown on button)
     pub upper: Option<String>,
+    /// CSS classes to apply to the key's Button
     pub classes: Option<Vec<String>>,
+    /// An alternative label to show on the button (regardless of layer)
+    pub label: Option<String>,
+    /// The icon to display in place of the label.
     /// Icon names found here: https://specifications.freedesktop.org/icon-naming-spec/icon-naming-spec-latest.html
     pub icon: Option<String>,
 }
@@ -36,6 +42,7 @@ impl KeyConfig {
             upper: None,
             classes: None,
             icon: None,
+            label: None,
         }
     }
 }

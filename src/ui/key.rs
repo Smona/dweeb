@@ -36,7 +36,7 @@ impl FactoryComponent for Key {
             #[watch]
             set_label?: match &self.config.icon {
                 Some(_) => None,
-                None => Some(self.character()),
+                None => self.config.label.as_ref().or(Some(self.character())),
             },
             set_icon_name?: self.config.icon.as_ref(),
             set_height_request: 80,
