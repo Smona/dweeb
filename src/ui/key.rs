@@ -40,6 +40,7 @@ impl FactoryComponent for Key {
             },
             set_icon_name?: self.config.icon.as_ref(),
             set_height_request: 80,
+            set_width_request: 100,
             set_hexpand: true,
             #[watch]
             set_css_classes: &self.classes,
