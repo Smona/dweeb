@@ -1,4 +1,4 @@
-use std::thread;
+use std::{thread, time::Duration};
 
 use gtk::glib;
 
@@ -65,8 +65,19 @@ async fn run_wayland_thread(
 
                 let is_active = writer.is_active();
                 if was_active != is_active {
-                    send_to_gtk.send(is_active).unwrap();
+                    if is_active {
+                        // Immediately open the keyboard
+                        send_to_gtk.send(true).unwrap();
+                    }
                     was_active = is_active;
+                }
+            },
+            // Debounce closing the keyboard.
+            // This prevents the keyboard from flashing in and out epileptically when switching
+            // between inputs in some implementations (e.g. hyprland).
+            _ = tokio::time::sleep(Duration::from_millis(400)) => {
+                if !was_active {
+                    send_to_gtk.send(false).unwrap();
                 }
             },
         }
