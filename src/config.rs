@@ -2,13 +2,6 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-pub fn get_config() -> Result<Config, String> {
-    let contents = std::fs::read_to_string("config.toml")
-        .map_err(|e| format!("Could not read config file: {}", e.to_string()))?;
-    toml::from_str::<Config>(&contents)
-        .map_err(|e| format!("Could not parse config file: {}", e.message()))
-}
-
 #[derive(Deserialize)]
 pub struct Config {
     pub layout: String,
@@ -50,4 +43,26 @@ impl KeyConfig {
 #[derive(Deserialize)]
 pub struct PageConfig {
     pub keys: Vec<String>,
+}
+
+pub fn get_config() -> Result<Config, String> {
+    // Load required base config
+    let mut base_conf = include_str!("../config.toml");
+
+    // Try to load optional user config
+    let user_conf = match dirs::config_dir() {
+        Some(path) => std::fs::read_to_string(path.join("dweeb/config.toml")).or_else(|e| {
+            Err(format!(
+                "User configuration not found at {}",
+                path.to_string_lossy()
+            ))
+        }),
+        None => Err("Could not open user configuration directory.".to_string()),
+    }
+    .unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        "".into()
+    });
+    toml::from_str::<Config>(&base_conf)
+        .map_err(|e| format!("Failed to parse dweeb configuration:\n\n{}", e))
 }
